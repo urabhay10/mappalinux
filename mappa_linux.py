@@ -35,13 +35,38 @@ def execute_command(command, sudo_password=None):
         except Exception as e:
             return str(e)
 
-def main():
+def get_api_key():
+    # Check environment variable
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    if api_key:
+        return api_key
+        
+    # Check local config file
+    config_path = os.path.expanduser("~/.mappa_key")
+    if os.path.exists(config_path):
         try:
-            api_key = getpass.getpass("Gemini API Key: ")
-        except KeyboardInterrupt:
-            sys.exit(1)
+            with open(config_path, "r") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+            
+    # Prompt and save
+    try:
+        print("API Key not found in env or ~/.mappa_key.")
+        api_key = getpass.getpass("Enter Gemini API Key (will be saved securely): ")
+        if api_key:
+            with open(config_path, "w") as f:
+                f.write(api_key.strip())
+            os.chmod(config_path, 0o600)
+            print(f"Key saved to {config_path}")
+            return api_key.strip()
+    except KeyboardInterrupt:
+        sys.exit(1)
+        
+    return None
+
+def main():
+    api_key = get_api_key()
             
     if not api_key:
         print("Error: API key is required.")
